@@ -1,0 +1,488 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>IoT Smart Parking System</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #1e1e2e 0%, #2d2d44 100%);
+            color: #ffffff;
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        /* Header Styles */
+        .header {
+            text-align: center;
+            margin-bottom: 40px;
+            padding: 20px;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 15px;
+            backdrop-filter: blur(10px);
+        }
+
+        .header h1 {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+            background: linear-gradient(90deg, #00d4ff, #00ff88);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .header p {
+            color: #b0b0c0;
+            font-size: 1.1rem;
+        }
+
+        /* Summary Cards */
+        .summary-cards {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin-bottom: 40px;
+        }
+
+        .summary-card {
+            background: rgba(255, 255, 255, 0.08);
+            padding: 30px;
+            border-radius: 15px;
+            text-align: center;
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .summary-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+        }
+
+        .summary-card h3 {
+            color: #b0b0c0;
+            font-size: 1rem;
+            margin-bottom: 15px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .summary-card .value {
+            font-size: 3rem;
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+
+        .summary-card.available .value {
+            color: #00ff88;
+        }
+
+        .summary-card.occupied .value {
+            color: #ff4757;
+        }
+
+        .summary-card.fare .value {
+            color: #ffa502;
+            font-size: 1.8rem;
+        }
+
+        .summary-card .label {
+            color: #808090;
+            font-size: 0.9rem;
+        }
+
+        /* Parking Layout Section */
+        .parking-section {
+            margin-top: 40px;
+        }
+
+        .section-title {
+            font-size: 1.8rem;
+            margin-bottom: 25px;
+            text-align: center;
+            color: #00d4ff;
+        }
+
+        .parking-slots {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 30px;
+            margin-bottom: 30px;
+        }
+
+        .slot-card {
+            background: rgba(255, 255, 255, 0.08);
+            padding: 40px;
+            border-radius: 15px;
+            text-align: center;
+            transition: all 0.4s ease;
+            border: 2px solid transparent;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .slot-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: inherit;
+            transition: opacity 0.4s ease;
+            opacity: 0;
+        }
+
+        .slot-card:hover::before {
+            opacity: 1;
+        }
+
+        .slot-card.free {
+            border-color: #00ff88;
+            background: rgba(0, 255, 136, 0.1);
+        }
+
+        .slot-card.occupied {
+            border-color: #ff4757;
+            background: rgba(255, 71, 87, 0.1);
+        }
+
+        .slot-card h3 {
+            font-size: 1.5rem;
+            margin-bottom: 20px;
+            color: #ffffff;
+        }
+
+        .slot-status {
+            display: inline-block;
+            padding: 15px 40px;
+            border-radius: 50px;
+            font-size: 1.2rem;
+            font-weight: bold;
+            margin-bottom: 15px;
+            transition: all 0.3s ease;
+        }
+
+        .slot-status.free {
+            background: #00ff88;
+            color: #1e1e2e;
+        }
+
+        .slot-status.occupied {
+            background: #ff4757;
+            color: #ffffff;
+        }
+
+        .slot-fare {
+            margin-top: 15px;
+            padding: 10px;
+            background: rgba(255, 165, 2, 0.2);
+            border-radius: 8px;
+            color: #ffa502;
+            font-size: 1.1rem;
+            font-weight: bold;
+        }
+
+        .slot-fare.hidden {
+            display: none;
+        }
+
+        /* Loading and Error States */
+        .loading {
+            text-align: center;
+            padding: 40px;
+            font-size: 1.2rem;
+            color: #00d4ff;
+        }
+
+        .error {
+            text-align: center;
+            padding: 40px;
+            background: rgba(255, 71, 87, 0.2);
+            border-radius: 15px;
+            color: #ff4757;
+            font-size: 1.1rem;
+        }
+
+        /* Last Update Timestamp */
+        .last-update {
+            text-align: center;
+            margin-top: 30px;
+            color: #808090;
+            font-size: 0.9rem;
+        }
+
+        /* Responsive Design */
+        @media (max-width: 768px) {
+            .header h1 {
+                font-size: 1.8rem;
+            }
+
+            .header p {
+                font-size: 0.9rem;
+            }
+
+            .summary-card .value {
+                font-size: 2.5rem;
+            }
+
+            .section-title {
+                font-size: 1.5rem;
+            }
+
+            .parking-slots {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        /* Animation */
+        @keyframes pulse {
+            0%, 100% {
+                opacity: 1;
+            }
+            50% {
+                opacity: 0.7;
+            }
+        }
+
+        .updating {
+            animation: pulse 1.5s ease-in-out infinite;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <div class="header">
+            <h1>IoT Smart Parking System</h1>
+            <p>Real-time parking management with ESP32</p>
+        </div>
+
+        <!-- Summary Cards -->
+        <div class="summary-cards">
+            <div class="summary-card available">
+                <h3>Available Slots</h3>
+                <div class="value" id="availableSlots">--</div>
+            </div>
+            <div class="summary-card occupied">
+                <h3>Occupied Slots</h3>
+                <div class="value" id="occupiedSlots">--</div>
+            </div>
+            <div class="summary-card fare">
+                <h3>Last Parking Fare</h3>
+                <div class="value" id="lastFare">No recent parking</div>
+            </div>
+        </div>
+
+        <!-- Parking Layout -->
+        <div class="parking-section">
+            <h2 class="section-title">Parking Layout – Real-time Status</h2>
+            <div class="parking-slots">
+                <!-- Slot 01 -->
+                <div class="slot-card" id="slot1Card">
+                    <h3>Slot-01</h3>
+                    <div class="slot-status" id="slot1Status">Loading...</div>
+                    <div class="slot-fare hidden" id="slot1Fare">Last Fare: -- tk</div>
+                </div>
+
+                <!-- Slot 02 -->
+                <div class="slot-card" id="slot2Card">
+                    <h3>Slot-02</h3>
+                    <div class="slot-status" id="slot2Status">Loading...</div>
+                    <div class="slot-fare hidden" id="slot2Fare">Last Fare: -- tk</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Last Update -->
+        <div class="last-update" id="lastUpdate">
+            Waiting for data...
+        </div>
+    </div>
+
+    <script>
+        // ========================================
+        // THINGSPEAK CONFIGURATION
+        // ========================================
+        // Replace these values with your actual ThingSpeak credentials
+        const CHANNEL_ID = '3236278';
+        const READ_API_KEY = '6103L5G5FMYAV67J';
+        const API_URL = `https://api.thingspeak.com/channels/${CHANNEL_ID}/feeds.json?api_key=${READ_API_KEY}&results=1`;
+        
+        // Refresh interval in milliseconds (15 seconds)
+        const REFRESH_INTERVAL = 5000;
+
+        // ========================================
+        // DATA FETCHING AND PROCESSING
+        // ========================================
+        
+        /**
+         * Fetch latest parking data from ThingSpeak API
+         */
+        async function fetchParkingData() {
+            try {
+                const response = await fetch(API_URL);
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                
+                const data = await response.json();
+                
+                // Check if we have valid feed data
+                if (data.feeds && data.feeds.length > 0) {
+                    const latestFeed = data.feeds[0];
+                    processData(latestFeed);
+                } else {
+                    console.warn('No feed data available');
+                }
+            } catch (error) {
+                console.error('Error fetching data:', error);
+                displayError('Unable to fetch parking data. Please check your API credentials.');
+            }
+        }
+
+        /**
+         * Process and update UI with fetched data
+         * @param {Object} feed - Latest feed data from ThingSpeak
+         */
+        function processData(feed) {
+            // Extract field values from ThingSpeak feed
+            // field1: Slot-01 status (0=Free, 1=Occupied)
+            // field2: Slot-02 status (0=Free, 1=Occupied)
+            // field5: Slot-01 last parking fare
+            // field6: Slot-02 last parking fare
+            // field7: Total occupied slots
+            // field8: Available slots
+            
+            const slot1Status = parseInt(feed.field1) || 0;
+            const slot2Status = parseInt(feed.field2) || 0;
+            const slot1Fare = parseInt(feed.field5) || 0;
+            const slot2Fare = parseInt(feed.field6) || 0;
+            const occupiedSlots = parseInt(feed.field7) || 0;
+            const availableSlots = parseInt(feed.field8) || 0;
+
+            // Update summary cards
+            updateSummaryCards(availableSlots, occupiedSlots);
+
+            // Update last parking fare display
+            updateLastParkingFare(slot1Status, slot2Status, slot1Fare, slot2Fare);
+
+            // Update individual slot cards
+            updateSlotCard(1, slot1Status, slot1Fare);
+            updateSlotCard(2, slot2Status, slot2Fare);
+
+            // Update timestamp
+            updateTimestamp(feed.created_at);
+        }
+
+        /**
+         * Update the summary cards at the top
+         */
+        function updateSummaryCards(available, occupied) {
+            document.getElementById('availableSlots').textContent = available;
+            document.getElementById('occupiedSlots').textContent = occupied;
+        }
+
+        /**
+         * Update the "Last Parking Fare" card
+         * Shows the most recent fare from either slot
+         */
+        function updateLastParkingFare(slot1Status, slot2Status, slot1Fare, slot2Fare) {
+            const lastFareElement = document.getElementById('lastFare');
+            
+            // Determine which slot most recently became free and has a fare
+            let lastFareText = 'No recent parking';
+            
+            // Check if either slot has a valid fare
+            if (slot2Fare > 0) {
+                lastFareText = `Slot-02: ${slot2Fare} tk`;
+            } else if (slot1Fare > 0) {
+                lastFareText = `Slot-01: ${slot1Fare} tk`;
+            }
+            
+            lastFareElement.textContent = lastFareText;
+        }
+
+        /**
+         * Update individual slot card UI
+         * @param {number} slotNum - Slot number (1 or 2)
+         * @param {number} status - Slot status (0=Free, 1=Occupied)
+         * @param {number} fare - Last parking fare for this slot
+         */
+        function updateSlotCard(slotNum, status, fare) {
+            const slotCard = document.getElementById(`slot${slotNum}Card`);
+            const slotStatus = document.getElementById(`slot${slotNum}Status`);
+            const slotFare = document.getElementById(`slot${slotNum}Fare`);
+
+            // Remove existing status classes
+            slotCard.classList.remove('free', 'occupied');
+            slotStatus.classList.remove('free', 'occupied');
+
+            if (status === 0) {
+                // Slot is FREE
+                slotCard.classList.add('free');
+                slotStatus.classList.add('free');
+                slotStatus.textContent = 'Available';
+
+                // Show last fare if available
+                if (fare > 0) {
+                    slotFare.textContent = `Last Fare: ${fare} tk`;
+                    slotFare.classList.remove('hidden');
+                } else {
+                    slotFare.classList.add('hidden');
+                }
+            } else {
+                // Slot is OCCUPIED
+                slotCard.classList.add('occupied');
+                slotStatus.classList.add('occupied');
+                slotStatus.textContent = 'Occupied';
+
+                // Hide fare when slot is occupied
+                slotFare.classList.add('hidden');
+            }
+        }
+
+        /**
+         * Update the last update timestamp
+         */
+        function updateTimestamp(timestamp) {
+            const lastUpdateElement = document.getElementById('lastUpdate');
+            const date = new Date(timestamp);
+            lastUpdateElement.textContent = `Last updated: ${date.toLocaleString()}`;
+        }
+
+        /**
+         * Display error message
+         */
+        function displayError(message) {
+            const lastUpdateElement = document.getElementById('lastUpdate');
+            lastUpdateElement.innerHTML = `<div class="error">${message}</div>`;
+        }
+
+        // ========================================
+        // INITIALIZATION
+        // ========================================
+        
+        // Fetch data immediately on page load
+        fetchParkingData();
+
+        // Set up auto-refresh every 15 seconds
+        setInterval(fetchParkingData, REFRESH_INTERVAL);
+
+        console.log('IoT Smart Parking System Dashboard initialized');
+        console.log(`Auto-refresh enabled: every ${REFRESH_INTERVAL / 1000} seconds`);
+    </script>
+</body>
+</html>
